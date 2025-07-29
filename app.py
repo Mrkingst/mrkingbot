@@ -1,33 +1,25 @@
 from flask import Flask, request
-from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes
-
+import telegram
 import os
 
-TOKEN = os.getenv("BOT_TOKEN")  # Make sure this is set in your Render environment
-BOT_USERNAME = "Mrking_st_bot"  # Replace with your actual bot username
+TOKEN = os.environ.get("BOT_TOKEN")  # Make sure this variable is set in Render
+bot = telegram.Bot(token=TOKEN)
 
 app = Flask(__name__)
-application = Application.builder().token(TOKEN).build()
 
-# --- Telegram Bot Handlers ---
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Hello! I am your bot and I'm alive on Render!")
+@app.route('/')
+def home():
+    return 'MrKing Bot is running!'
 
-application.add_handler(CommandHandler("start", start))
+@app.route(f'/{TOKEN}', methods=['POST'])
+def webhook():
+    update = telegram.Update.de_json(request.get_json(force=True), bot)
+    chat_id = update.message.chat.id
+    message = update.message.text
 
-# --- Webhook route for Telegram ---
-@app.route(f"/{BOT_USERNAME}", methods=["POST"])
-async def webhook():
-    update = Update.de_json(request.get_json(force=True), application.bot)
-    await application.process_update(update)
-    return "ok"
+    bot.sendMessage(chat_id=chat_id, text="You said: " + message)
+    return 'ok'
 
-# --- Root route for testing ---
-@app.route("/", methods=["GET"])
-def index():
-    return "Bot is running!"
-
-# --- Run Flask ---
-if __name__ == "__main__":
-    app.run(debug=True)
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port)
