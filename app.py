@@ -1,25 +1,26 @@
 from flask import Flask, request
-import telegram
+from telegram import Update
+from telegram.ext import Application, CommandHandler, ContextTypes
+
 import os
 
-TOKEN = os.environ.get("BOT_TOKEN")  # Make sure this variable is set in Render
-bot = telegram.Bot(token=TOKEN)
+TOKEN = "8250650945:AAFr6GPfBHB-nywtrg1agcIGSG-HxvtLqq8"
+WEBHOOK_PATH = f"/{TOKEN}"
 
 app = Flask(__name__)
 
-@app.route('/')
-def home():
-    return 'MrKing Bot is running!'
+bot_app = Application.builder().token(TOKEN).build()
 
-@app.route(f'/{TOKEN}', methods=['POST'])
+# Define a /start command
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("👋 Hello! Your bot is working.")
+
+# Add handler
+bot_app.add_handler(CommandHandler("start", start))
+
+# Flask route to receive webhook
+@app.route(WEBHOOK_PATH, methods=["POST"])
 def webhook():
-    update = telegram.Update.de_json(request.get_json(force=True), bot)
-    chat_id = update.message.chat.id
-    message = update.message.text
-
-    bot.sendMessage(chat_id=chat_id, text="You said: " + message)
-    return 'ok'
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 10000))
-    app.run(host='0.0.0.0', port=port)
+    update = Update.de_json(request.get_json(force=True), bot_app.bot)
+    bot_app.process_update(update)
+    return "ok"
