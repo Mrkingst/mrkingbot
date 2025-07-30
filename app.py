@@ -1,26 +1,33 @@
 from flask import Flask, request
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
-
 import os
 
-TOKEN = "8250650945:AAFr6GPfBHB-nywtrg1agcIGSG-HxvtLqq8"
-WEBHOOK_PATH = f"/{TOKEN}"
+TOKEN = os.getenv("BOT_TOKEN")  # Use Render environment variable
+BOT_USERNAME = "Mrking_st_bot"  # Your bot username
 
 app = Flask(__name__)
 
-bot_app = Application.builder().token(TOKEN).build()
+application = Application.builder().token(TOKEN).build()
 
-# Define a /start command
+# Define the command handler
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("👋 Hello! Your bot is working.")
+    await update.message.reply_text("Hello! Your bot is working ✅")
 
-# Add handler
-bot_app.add_handler(CommandHandler("start", start))
+# Add the command to the bot
+application.add_handler(CommandHandler("start", start))
 
-# Flask route to receive webhook
-@app.route(WEBHOOK_PATH, methods=["POST"])
+# Webhook endpoint
+@app.route(f"/{TOKEN}", methods=["POST"])
 def webhook():
-    update = Update.de_json(request.get_json(force=True), bot_app.bot)
-    bot_app.process_update(update)
+    update = Update.de_json(request.get_json(force=True), application.bot)
+    application.update_queue.put_nowait(update)
     return "ok"
+
+# Start webhook server when app runs
+if __name__ == "__main__":
+    application.run_webhook(
+        listen="0.0.0.0",
+        port=int(os.environ.get("PORT", 10000)),
+        webhook_url=f"https://mrkingbot.onrender.com/{TOKEN}"
+    )
